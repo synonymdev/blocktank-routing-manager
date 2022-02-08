@@ -3,8 +3,8 @@ const BN = require('bignumber.js')
 
 class FeeTier {
   static LEVELS = [
-    [0,50, 0.1],
-    [50,250000, 0.8],
+    [0,5000, 0.1],
+    [5000,250000, 0.8],
     [250000,500000, 0.8],
     [500000,750000, 0.6],
     [750000,1000000, 0.4],
@@ -29,7 +29,7 @@ class FeeTier {
 
   static tierToPpmFeeRate(tier){
     const pcnt = tier[2]
-    const rate = new BN(pcnt).times(10000).toString()
+    const rate = new BN(pcnt).times(100000).toString()
     return rate
   }
 }

@@ -24,7 +24,8 @@ class LightningRouter extends Worker {
       amlFiatCapactyCheck: this.amlFiatCapactyCheck.bind(this),
       updateLnRoutingFee: this.updateLnRoutingFee.bind(this),
       getBtcUsd: this.getBtcUsd.bind(this),
-      satsToBtc: this.satsConvert.toBtc.bind(this)
+      satsToBtc: this.satsConvert.toBtc.bind(this),
+      alert: this.alertSlack.bind(this)
     })
   }
 

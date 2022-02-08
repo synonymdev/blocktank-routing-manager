@@ -79,11 +79,13 @@ class TierManager {
       if (!dbPeer) return
       if (FeeTier.isSame(dbPeer.routing_fee_tier, info.tier)) return null
       console.log(`Fee tier ${pub} changed`)
+      this.api.alertSlack('info', 'channel_tier', `Channel tier changed for node ${pub}`)
       await this.updateLNFees(info.tier, info.chans)
       return LightningPeers.updateFeeTier(pub, info)
     }, async (err) => {
       if (err) {
         console.log(err)
+        this.api.alertSlack('error', 'channel_tier', 'Failed to update channel tiers')
         throw new Error('Failed to update fee tier')
       }
       this._updates = new Map()
@@ -91,6 +93,7 @@ class TierManager {
     })
   }
 
+  // Call LN worker and update a channel's fee
   async updateLNFees (tier, chans) {
     return new Promise((resolve, reject) => {
       async.mapSeries(chans, async (chan) => {
@@ -218,13 +221,16 @@ module.exports = class RouteManager {
     } catch (err) {
       // By default we reject channels.
       console.log('Failed to check AML. Rejecting channel')
+      this.api.alertSlack('error', 'router', 'Failed to check aml on channel request')
       return cb(null, { accept: false })
     }
 
     // We accept channels only if AML is ok
     if (amlCheck.aml_pass === true) {
+      this.api.alertSlack('info', 'router', 'channel accepted')
       return cb(null, { accept: true })
     }
+    this.api.alertSlack('info', 'router', 'channel rejected')
     cb(null, { accept: false })
   }
 
