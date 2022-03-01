@@ -99,6 +99,14 @@ class LightningPeers extends EventEmitter {
     })
   }
 
+  static channelRejected (pk, {reason}, cb) {
+    return new Promise((resolve, reject) => {
+      const p = new LightningPeers()
+
+      p.LogEvent(pk, [{ name: 'CHANNEL_REJECT', reason }], promcb(resolve, reject, cb))
+    })
+  }
+
   static peerConnected (pk, cb) {
     return new Promise((resolve, reject) => {
       const p = new LightningPeers()
