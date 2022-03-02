@@ -30,7 +30,9 @@ class LnChannels extends EventEmitter {
 
     // nodes is a map that holds channels keyed by the remote node id
     this.nodes = new Map()
-
+    
+    if(!channelArr) return 
+    
     channelArr.forEach((ch) => {
       this.currentChannels.set(ch.id, ch)
       if (!this.nodes.has(ch.partner_public_key)) {
@@ -176,6 +178,8 @@ module.exports = class RouteManager {
     this.lnChannels.once('channels_updated', () => {
       this.tierManager = new TierManager(this.lnChannels, this.api)
     })
+
+    //TODO record all current peers on launch
   }
 
   // A new routing event has been detected, we start
@@ -206,13 +210,13 @@ module.exports = class RouteManager {
     console.log(`ID: ${chan.id}`)
     console.log(`Capacity: ${chan.capacity}`)
     console.log(`Remote Node: ${chan.partner_public_key}`)
-
     // We need to check if the node's capacity is aligned with our AML requirements.
     const remoteBalance = chan.capacity - chan.local_balance
     let amlCheck
     try {
       amlCheck = await this.api.amlFiatCapactyCheck({
         node_public_key: chan.partner_public_key,
+        node_socket: "63.254.11.255",
         order: {
           remote_balance: remoteBalance,
           local_balance: chan.local_balance
@@ -222,7 +226,10 @@ module.exports = class RouteManager {
       // By default we reject channels.
       console.log('Failed to check AML. Rejecting channel')
       this.api.alertSlack('error', 'router', 'Failed to check aml on channel request')
-      return cb(null, { accept: false })
+      cb(null, { accept: false })
+      return LightningPeers.channelRejected(chan.partner_public_key,{
+        reason: err.message || "Error checking aml"
+      })
     }
 
     // We accept channels only if AML is ok
@@ -230,8 +237,9 @@ module.exports = class RouteManager {
       this.api.alertSlack('info', 'router', 'channel accepted')
       return cb(null, { accept: true })
     }
-    this.api.alertSlack('info', 'router', 'channel rejected')
-    cb(null, { accept: false })
+    this.api.alertSlack('info', 'router', 'channel rejected '+amlCheck.reason)
+    cb(null, { accept: false, reason: amlCheck.reason })
+    LightningPeers.channelRejected(chan.partner_public_key,{ reason: amlCheck.reason })
   }
 
   // Record peer informationa and create/update node's profile
