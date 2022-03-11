@@ -216,7 +216,7 @@ module.exports = class RouteManager {
     try {
       amlCheck = await this.api.amlFiatCapactyCheck({
         node_public_key: chan.partner_public_key,
-        node_socket: "63.254.11.255",
+        node_socket: _.get(chan,"peer_info.socket"),
         order: {
           remote_balance: remoteBalance,
           local_balance: chan.local_balance
