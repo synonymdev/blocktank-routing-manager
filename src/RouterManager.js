@@ -235,7 +235,7 @@ module.exports = class RouteManager {
 
     // We accept channels only if AML is ok
     if (amlCheck.aml_pass === true) {
-      this.api.alertSlack('info', 'router', 'channel accepted')
+      this.api.alertSlack('info', 'router', `New channel from ${ch.partner_public_key} - Capacity: ${chan.capacity}`)
       return cb(null, { accept: true })
     }
     this.api.alertSlack('info', 'router', 'channel rejected '+amlCheck.reason)
