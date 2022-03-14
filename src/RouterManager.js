@@ -216,7 +216,7 @@ module.exports = class RouteManager {
     try {
       amlCheck = await this.api.amlFiatCapactyCheck({
         node_public_key: chan.partner_public_key,
-        node_socket: _.get(chan,"peer_info.socket"),
+        node_socket: chan.peer_info ? chan.peer_info.socket : "",
         order: {
           remote_balance: remoteBalance,
           local_balance: chan.local_balance
@@ -225,6 +225,7 @@ module.exports = class RouteManager {
     } catch (err) {
       // By default we reject channels.
       console.log('Failed to check AML. Rejecting channel')
+      console.log(err)
       this.api.alertSlack('error', 'router', 'Failed to check aml on channel request')
       cb(null, { accept: false })
       return LightningPeers.channelRejected(chan.partner_public_key,{
