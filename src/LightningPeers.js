@@ -1,5 +1,4 @@
 'use strict'
-
 const { DB } = require('blocktank-worker')
 const config = require('../config/worker.config.json')
 const { EventEmitter } = require('events')

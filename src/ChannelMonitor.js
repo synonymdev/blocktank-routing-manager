@@ -6,7 +6,7 @@ const privates = [
   'constructor'
 ]
 
-class LightningRouter extends Worker {
+class ChannelMonitor extends Worker {
   constructor (appConfig) {
     super({
       name: 'svc:ln:router',
@@ -21,13 +21,12 @@ class LightningRouter extends Worker {
     this.router = new RouterManager(config, {
       getChannels: this.getChannels.bind(this),
       getInfo: this.getNodeInfo.bind(this),
-      onNewChannelRequest: this.onNewChannelRequest.bind(this),
+      amlFiatCapactyCheck: this.amlFiatCapactyCheck.bind(this),
       updateLnRoutingFee: this.updateLnRoutingFee.bind(this),
       getBtcUsd: this.getBtcUsd.bind(this),
       satsToBtc: this.satsConvert.toBtc.bind(this),
-      alertSlack: this.alertSlack.bind(this),
+      alertSlack: this.alertSlack.bind(this)
     })
-
   }
 
   start () {
@@ -57,7 +56,7 @@ class LightningRouter extends Worker {
     return this.callLn('getInfo', null, cb)
   }
 
-  onNewChannelRequest (args, cb) {
+  amlFiatCapactyCheck (args, cb) {
     return this.callWorker('svc:channel_aml', 'amlFiatCapactyCheck', args, cb)
   }
 
@@ -70,4 +69,4 @@ class LightningRouter extends Worker {
   }
 }
 
-module.exports = LightningRouter
+module.exports = ChannelMonitor
