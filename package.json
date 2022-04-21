@@ -4,19 +4,19 @@
   "description": "Manage routing fees and monitoring",
   "main": "start.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha test"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rbndg/blocktank-routing-manager.git"
+    "url": "git+https://github.com/synonymdev//blocktank-routing-manager.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/rbndg/blocktank-routing-manager/issues"
+    "url": "https://github.com/synonymdev//blocktank-routing-manager/issues"
   },
-  "homepage": "https://github.com/rbndg/blocktank-routing-manager#readme",
+  "homepage": "https://github.com/synonymdev//blocktank-routing-manager#readme",
   "dependencies": {
     "async": "^3.2.3",
     "bignumber.js": "^9.0.2"

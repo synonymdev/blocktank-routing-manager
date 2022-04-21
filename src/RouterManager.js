@@ -30,9 +30,9 @@ class LnChannels extends EventEmitter {
 
     // nodes is a map that holds channels keyed by the remote node id
     this.nodes = new Map()
-    
-    if(!channelArr) return 
-    
+
+    if (!channelArr) return
+
     channelArr.forEach((ch) => {
       this.currentChannels.set(ch.id, ch)
       if (!this.nodes.has(ch.partner_public_key)) {
@@ -50,7 +50,8 @@ class LnChannels extends EventEmitter {
     const info = new Map()
     channelIds.forEach((chanId) => {
       const chan = this.currentChannels.get(chanId)
-      if (info.has(chan.partner_public_key)) return
+      if (!chan || info.has(chan.partner_public_key)) return
+      console.log(chan)
       const chans = this.nodes.get(chan.partner_public_key)
       info.set(chan.partner_public_key, chans)
     })
@@ -179,7 +180,7 @@ module.exports = class RouteManager {
       this.tierManager = new TierManager(this.lnChannels, this.api)
     })
 
-    //TODO record all current peers on launch
+    // TODO record all current peers on launch
   }
 
   // A new routing event has been detected, we start
@@ -187,11 +188,11 @@ module.exports = class RouteManager {
     cb(null)
 
     if (args.is_send) {
-      return this.handleOutgoing(args)
+      // return this.handleOutgoing(args)
     }
 
     if (args.is_receive) {
-      return this.handleIncoming(args)
+      // return this.handleIncoming(args)
     }
 
     if (args.is_confirmed) {
@@ -212,35 +213,32 @@ module.exports = class RouteManager {
     console.log(`Remote Node: ${chan.partner_public_key}`)
     // We need to check if the node's capacity is aligned with our AML requirements.
     const remoteBalance = chan.capacity - chan.local_balance
-    let amlCheck
-    try {
-      amlCheck = await this.api.amlFiatCapactyCheck({
-        node_public_key: chan.partner_public_key,
-        node_socket: chan.peer_info ? chan.peer_info.socket : "",
-        order: {
-          remote_balance: remoteBalance,
-          local_balance: chan.local_balance
-        }
-      })
-    } catch (err) {
-      // By default we reject channels.
-      console.log('Failed to check AML. Rejecting channel')
-      console.log(err)
-      this.api.alertSlack('error', 'router', 'Failed to check aml on channel request')
-      cb(null, { accept: false })
-      return LightningPeers.channelRejected(chan.partner_public_key,{
-        reason: err.message || "Error checking aml"
-      })
-    }
+    this.api.onNewChannelRequest({
+      node_public_key: chan.partner_public_key,
+      node_socket: chan.peer_info ? chan.peer_info.socket : '',
+      order: {
+        remote_balance: remoteBalance,
+        local_balance: chan.local_balance
+      }
+    }, (err, amlCheck) => {
+      console.log(amlCheck)
+      if (err) {
+        console.log('FAILED_TO_CHECK_CHANNEL_REQUEST')
+        cb(err)
+        this.api.alertSlack('error', 'router', 'Failed to check aml on channel request')
+        return
+      }
 
-    // We accept channels only if AML is ok
-    if (amlCheck.aml_pass === true) {
-      this.api.alertSlack('info', 'router', 'channel accepted')
-      return cb(null, { accept: true })
-    }
-    this.api.alertSlack('info', 'router', 'channel rejected '+amlCheck.reason)
-    cb(null, { accept: false, reason: amlCheck.reason })
-    LightningPeers.channelRejected(chan.partner_public_key,{ reason: amlCheck.reason })
+      // We accept channels only if AML is ok
+      if (amlCheck.aml_pass === true) {
+        this.api.alertSlack('info', 'router', `New channel from ${chan.partner_public_key} - Capacity: ${chan.capacity}`)
+        return cb(null, { accept: true })
+      }
+
+      this.api.alertSlack('info', 'router', 'channel rejected ' + amlCheck.reason)
+      cb(null, { accept: false, reason: amlCheck.reason })
+      LightningPeers.channelRejected(chan.partner_public_key, { reason: amlCheck.reason })
+    })
   }
 
   // Record peer informationa and create/update node's profile
