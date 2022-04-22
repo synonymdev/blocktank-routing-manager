@@ -1,7 +1,7 @@
 # blocktank-routing-manager
 
-Microservice worker for data collection, fee managment and other related features related to routing.
+Microservice worker for data collection, fee management and other features related to routing.
 
-### Featurs
+### Features
 * Fee tier setting for peers.
 * Peer data collection (not being used at this time)
