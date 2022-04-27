@@ -25,9 +25,8 @@ class LightningRouter extends Worker {
       updateLnRoutingFee: this.updateLnRoutingFee.bind(this),
       getBtcUsd: this.getBtcUsd.bind(this),
       satsToBtc: this.satsConvert.toBtc.bind(this),
-      alertSlack: this.alertSlack.bind(this),
+      alertSlack: this.alertSlack.bind(this)
     })
-
   }
 
   start () {

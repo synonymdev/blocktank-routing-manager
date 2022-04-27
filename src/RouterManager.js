@@ -61,7 +61,8 @@ class LnChannels extends EventEmitter {
 
 // TierManager is in charge of calculating and deciding the fee tier of a node
 class TierManager {
-  constructor (lnChannels, api) {
+  constructor (config, lnChannels, api) {
+    this.config = config
     this.api = api
     this.lnChannels = lnChannels
     this._updates = new Map()
@@ -78,6 +79,7 @@ class TierManager {
     const nodeTiers = await this.calcTier()
     this._updating_db = true
     async.forEachOf(nodeTiers, async ([pub, info]) => {
+      if (this.config.node_whitelist.includes(pub)) return null
       const dbPeer = await LightningPeers.getPeer(pub)
       if (!dbPeer) return
       if (FeeTier.isSame(dbPeer.routing_fee_tier, info.tier)) return null
@@ -172,12 +174,12 @@ class TierManager {
 
 module.exports = class RouteManager {
   constructor (config = {}, api) {
-    this.config = config.bitcoin_node
+    this.config = config
     this.api = api
 
     this.lnChannels = new LnChannels(api)
     this.lnChannels.once('channels_updated', () => {
-      this.tierManager = new TierManager(this.lnChannels, this.api)
+      this.tierManager = new TierManager(config, this.lnChannels, this.api)
     })
 
     // TODO record all current peers on launch
@@ -207,6 +209,10 @@ module.exports = class RouteManager {
 
   // Process channel opening requets
   async newChannelRequest (chan, cb) {
+    if (this.config.node_whitelist.includes(chan.partner_public_key)) {
+      this.api.alertSlack('info', 'router', `New channel from whitelisted node ${chan.partner_public_key} - Capacity: ${chan.capacity}`)
+      return cb(null, { accept: true })
+    }
     console.log('New Channel Request:')
     console.log(`ID: ${chan.id}`)
     console.log(`Capacity: ${chan.capacity}`)
