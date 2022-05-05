@@ -67,6 +67,7 @@ class LightningRouter extends Worker {
   getBtcUsd (args, cb) {
     return this.callWorker('svc:exchange_rate', 'getBtcUsd', args, cb)
   }
+
 }
 
 module.exports = LightningRouter
