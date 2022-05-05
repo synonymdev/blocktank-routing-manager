@@ -220,6 +220,7 @@ module.exports = class RouteManager {
     // We need to check if the node's capacity is aligned with our AML requirements.
     const remoteBalance = chan.capacity - chan.local_balance
     this.api.onNewChannelRequest({
+      action:"channel_opening_request",
       node_public_key: chan.partner_public_key,
       node_socket: chan.peer_info ? chan.peer_info.socket : '',
       order: {
@@ -227,7 +228,6 @@ module.exports = class RouteManager {
         local_balance: chan.local_balance
       }
     }, (err, amlCheck) => {
-      console.log(amlCheck)
       if (err) {
         console.log('FAILED_TO_CHECK_CHANNEL_REQUEST')
         cb(err)
