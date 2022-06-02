@@ -2,6 +2,7 @@
 const { Worker } = require('blocktank-worker')
 const RouterManager = require('./RouterManager')
 const config = require('../config/worker.config.json')
+const { promisify } = require('util')
 const privates = [
   'constructor'
 ]
@@ -18,6 +19,7 @@ class LightningRouter extends Worker {
         }
       ]
     })
+
     this.router = new RouterManager(config, {
       getChannels: this.getChannels.bind(this),
       getInfo: this.getNodeInfo.bind(this),
@@ -25,7 +27,9 @@ class LightningRouter extends Worker {
       updateLnRoutingFee: this.updateLnRoutingFee.bind(this),
       getBtcUsd: this.getBtcUsd.bind(this),
       satsToBtc: this.satsConvert.toBtc.bind(this),
-      alertSlack: this.alertSlack.bind(this)
+      getForwards: this.getForwards.bind(this),
+      getNodeOfClosedChannel: promisify(this.getNodeOfClosedChannel.bind(this)),
+      alertSlack: this.alertSlack.bind(this),
     })
   }
 
@@ -66,6 +70,24 @@ class LightningRouter extends Worker {
 
   getBtcUsd (args, cb) {
     return this.callWorker('svc:exchange_rate', 'getBtcUsd', args, cb)
+  }
+
+  getForwards(node,args,cb){
+    this.callLn("getForwards",[!node ? {all: true} : {node_id:node },args],(err,data)=>{
+      if(err) return cb(err)
+      cb(null, data)
+    })
+  }
+
+  getNodeOfClosedChannel(chan,cb){
+    this.callLn("getNodeOfClosedChannel",[null,{ channel_id: chan}],(err,data)=>{
+      if(err) return cb(err)
+      cb(null, data)
+    })
+  }
+
+  async syncFwdEvents(cb){
+    return this.router.syncFwdEvents(cb)
   }
 
 }

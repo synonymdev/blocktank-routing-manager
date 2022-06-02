@@ -2,7 +2,6 @@
 const { DB } = require('blocktank-worker')
 const config = require('../config/worker.config.json')
 const { EventEmitter } = require('events')
-const FeeTier = require('./FeeTier')
 
 const promcb = (resolve, reject, cb) => {
   return (err, data) => {
@@ -13,9 +12,7 @@ const promcb = (resolve, reject, cb) => {
   }
 }
 
-const STARTING_FEE_TIER = FeeTier.LEVELS[0]
-
-class LightningPeers extends EventEmitter {
+class LightningPeerGroups extends EventEmitter {
   constructor (params) {
     super()
     this.data = params
@@ -29,45 +26,21 @@ class LightningPeers extends EventEmitter {
   }
 
   static from (params) {
-    return new LightningPeers(params)
+    return new LightningPeerGroups(params)
   }
 
-  LogEvent (pk, events, cb) {
-    return (err) => {
-      if (err) return cb(err)
-      const bulk = this.db.LightningPeerLog.initializeUnorderedBulkOp()
-      events.forEach(({ name, meta }) => {
-        const data = {
-          node_public_key: pk,
-          name,
-          ts: Date.now(),
-          meta: meta || null
-        }
-        bulk.insert(data)
-      })
-      bulk.execute(cb)
-    }
-  }
 
-  static newPeer (params, cb) {
+  static newGroup (params, cb) {
     return new Promise((resolve, reject) => {
       const p = new LightningPeers()
       p.on('ready', () => {
         const data = {
-          node_public_key: params.public_key,
-          routing_fee_tier: STARTING_FEE_TIER,
+          nodes: params.nodes,
+          routing_fee_tier: params.fee_tier,
           created_at: Date.now(),
-          last_connect: Date.now(),
-          last_disconnect: null
         }
 
-        const logEvent = p.LogEvent(params.public_key, [
-          { name: 'CREATED' },
-          { name: 'ROUTING_FEE_TIER', meta: { tier: STARTING_FEE_TIER } },
-          { name: 'CONNECTED' }
-        ], promcb(resolve, reject, cb))
-
-        p.db.LightningPeers.insertOne(data, logEvent)
+        p.db.LightningPeerGroups.insertOne(data, cb)
       })
     })
   }
@@ -139,8 +112,7 @@ class LightningPeers extends EventEmitter {
         }, logEvent)
     })
   }
-  
-  static FeeTier=FeeTier
+
 }
 
-module.exports = LightningPeers
+module.exports = LightningPeerGroups
