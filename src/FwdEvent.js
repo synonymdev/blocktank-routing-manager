@@ -42,28 +42,30 @@ class LightningFwd extends EventEmitter {
           fee: params.fee,
           amount: params.amount,
           routed_at: params.routed_at,
-          created_at: Date.now(),
+          usd_amount: params.usd_amount,
+          usd_fee: params.usd_fee,
+          created_at: Date.now()
         }
         p.db.LightningFwdEvent.insertOne(data, promcb(resolve, reject, cb))
       })
     })
   }
 
-  static latestEvent(cb){
+  static latestEvent (cb) {
     return new Promise((resolve, reject) => {
       const p = new LightningFwd()
       p.on('ready', () => {
-        p.db.LightningFwdEvent.find().sort({routed_at: -1}).limit(1).toArray(promcb(resolve, reject, cb))
+        p.db.LightningFwdEvent.find().sort({ routed_at: -1 }).limit(1).toArray(promcb(resolve, reject, cb))
       })
     })
   }
 
-  static eachEvent(query,iter){
+  static eachEvent (query, iter) {
     const p = new LightningFwd()
     p.on('ready', () => {
       p.db.LightningFwdEvent.find(query)
-      .sort({routed_at: -1})
-      .forEach(iter)
+        .sort({ routed_at: -1 })
+        .forEach(iter)
     })
   }
 }

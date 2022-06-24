@@ -1,12 +1,11 @@
 'use strict'
 const BN = require('bignumber.js')
-const Bignumber = require('bignumber.js')
 const async = require('async')
 const LightningPeers = require('./LightningPeers')
 const FwdEvent = require('./FwdEvent')
+const PeerGroup = require('./PeerGroups')
 const { promisify } = require('util')
 const FeeTier = LightningPeers.FeeTier
-
 
 // TierManager is in charge of calculating and deciding the fee tier of a node
 class TierManager {
@@ -116,32 +115,74 @@ class TierManager {
 
       // After calculating total amounts of all the channels of a node, we determine what the fee tier should be.
       const btcTotal = this.api.satsToBtc(totals.total_in_out)
-      const tier = LightningPeers.FeeTier.getTierFromAmount(Bignumber(btcTotal).times(price).toNumber())
+      const tier = LightningPeers.FeeTier.getTierFromAmount(BN(btcTotal).times(price).toNumber())
 
       nodeTiers.set(pub, { tier, chans })
     })
     return nodeTiers
   }
 
-  initPeerFees(pub){
-    return LightningPeers.newPeer({
-      public_key: pub,
+  initPeerFees (pub) {
+    return LightningPeers.newPeer({ public_key: pub })
+  }
+
+  async calcFwdHistory (cb) {
+
+    const pCache = new Map()
+    FwdEvent.eachEvent({}, async (fwd) => {
+      let inGroup
+      let outGroup
+      try {
+        inGroup = await PeerGroup.getGroup(fwd.in_chan_node)
+        outGroup = await PeerGroup.getGroup(fwd.out_chan_node)
+      } catch(err){
+        console.log(err)
+      }
+
+      console.log("IN", inGroup)
+      console.log("OUT", outGroup)
+      if (!inGroup) {
+        console.log("Adding new group: ", fwd.in_chan_node)
+        await PeerGroup.newGroup({
+          nodes: [fwd.in_chan_node],
+          fee_tier: LightningPeers.FeeTier.LEVELS[0]
+        })
+        inGroup = await PeerGroup.getGroup(fwd.in_chan_node)
+      }
+      if (!outGroup) {
+        console.log("Adding new group: ", fwd.out_chan_node)
+        await PeerGroup.newGroup({
+          nodes: [fwd.out_chan_node],
+          fee_tier: LightningPeers.FeeTier.LEVELS[0]
+        })
+        outGroup = await PeerGroup.getGroup(fwd.out_chan_node)
+      }
+
+      inGroup.total_sats_fwd += fwd.amount
+      inGroup.total_usd_fwd += fwd.usd_amount
+      // await PeerGroup.updateGroup(inGroup._id, inGroup)
+      // await PeerGroup.updateGroup(inGroup._id, outGroup)
     })
   }
 
-  async calcFwdHistory(cb){
-    const pCache = new Map()
-    FwdEvent.eachEvent({},(fwd)=>{
-      console.log(fwd)
-    })    
+  _addPeerGroup(nodes){
+    return PeerGroup.newGroup({
+      nodes,
+      fee_tier: LightningPeers.FeeTier.LEVELS[0]
+    })
   }
 
-  async syncFwdEvents(cb){
-    const addEvent = async (fwds, pubkey) =>{
-      for(let x = 0;  x< fwds.length; x++){
+  async syncFwdEvents (cb) {
+    const addEvent = async (fwds, pubkey) => {
+      for (let x = 0; x < fwds.length; x++) {
         const fwd = fwds[x]
         const inNode = await this.lnChannels.getNodeOfChannel(fwd.incoming_channel)
         const outNode = await this.lnChannels.getNodeOfChannel(fwd.outgoing_channel)
+        const { price } = await this.api.getBtcUsd({ts:fwd.created_at})
+
+        const usdAmount = BN(this.api.satsToBtc(fwd.tokens)).times(price).toNumber()
+        const usdFee = BN(this.api.satsToBtc(fwd.fee)).times(price).toNumber()
+
         await FwdEvent.addEvent({
           in_chan: fwd.incoming_channel,
           in_chan_node: outNode,
@@ -150,33 +191,55 @@ class TierManager {
           fee: fwd.fee,
           amount: fwd.tokens,
           routed_at: new Date(fwd.created_at).getTime(),
-          node_public_key:pubkey
+          node_public_key: pubkey,
+          usd_amount: usdAmount,
+          usd_fee: usdFee
         })
+        
+        const outGroup = await PeerGroup.getGroup(outNode)
+        const inGroup = await PeerGroup.getGroup(inNode)
+
+        if(!outGroup){
+          await this._addPeerGroup([outGroup])
+          outGroup = await PeerGroup.getGroup(outNode)
+        }
+
+        if(!inGroup){
+          await this._addPeerGroup([inGroup])
+          inGroup = await PeerGroup.getGroup(inNode)
+        }
+
+        inGroup.total_sats_fwd += fwd.tokens
+        inGroup.total_sats_fee += fwd.fee
+
+        inGroup.total_usd_fwd += usdAmount
+        inGroup.total_usd_fee += usdFee
+        
+        await PeerGroup.updateGroup(outGroup._id, outGroup)
+        await PeerGroup.updateGroup(inGroup._id, inGroup)
       }
     }
 
     const latestForward = await FwdEvent.latestEvent()
 
-    let query = {}
-    if(latestForward.length > 0 ){
+    const query = {}
+    if (latestForward.length > 0) {
       query.after = new Date(new Date(latestForward.pop().routed_at).getTime() + 1000)
       query.before = new Date()
     }
     const getForwards = promisify(this.api.getForwards.bind(this))
-    const forwards = await getForwards(null,{limit:2, ...query})
-    async.eachOf(forwards, async (node, name)=>{
+    const forwards = await getForwards(null, { limit: 2, ...query })
+    async.eachOf(forwards, async (node, name) => {
       let { forwards, next } = node.data
-      await addEvent(forwards,node.node_public_key)
-      while(next){
-        const data = await getForwards(name,{token: next})
+      await addEvent(forwards, node.node_public_key)
+      while (next) {
+        const data = await getForwards(name, { token: next })
         await addEvent(data.forwards, node.node_public_key)
-        if(!data.next) break
+        if (!data.next) break
         next = data.next
       }
-      return
     }, cb)
   }
 }
-
 
 module.exports = TierManager

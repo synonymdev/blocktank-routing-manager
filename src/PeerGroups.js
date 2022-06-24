@@ -1,7 +1,7 @@
 'use strict'
-const { DB } = require('blocktank-worker')
 const config = require('../config/worker.config.json')
 const { EventEmitter } = require('events')
+const { DB } = require("blocktank-worker")
 
 const promcb = (resolve, reject, cb) => {
   return (err, data) => {
@@ -29,90 +29,49 @@ class LightningPeerGroups extends EventEmitter {
     return new LightningPeerGroups(params)
   }
 
-
   static newGroup (params, cb) {
     return new Promise((resolve, reject) => {
-      const p = new LightningPeers()
+      const p = new LightningPeerGroups()
       p.on('ready', () => {
         const data = {
           nodes: params.nodes,
           routing_fee_tier: params.fee_tier,
           created_at: Date.now(),
+          total_sats_fwd: 0,
+          total_usd_fwd: 0,
+          total_sats_fee: 0,
+          total_usd_fee: 0,
+        }
+        p.db.LightningPeerGroups.insertOne(data, promcb(resolve, reject, cb))
+      })
+    })
+  }
+
+  static updateGroup(id,data, cb){
+    return new Promise((resolve, reject) => {
+      const p = new LightningPeerGroups()
+      p.on('ready', () => {
+        if(data._id){
+          delete data._id
         }
 
-        p.db.LightningPeerGroups.insertOne(data, cb)
+        return p.db.LightningPeerGroups.updateOne(
+          { _id: new order.db.ObjectId(id) },
+          {
+            $set: data
+          }, promcb(resolve, reject, cb))
       })
     })
   }
 
-  static getPeer (pk, cb) {
+  static getGroup (pk, cb) {
     return new Promise((resolve, reject) => {
-      const p = new LightningPeers()
+      const p = new LightningPeerGroups()
       p.on('ready', () => {
-        p.db.LightningPeers.findOne({
-          node_public_key: pk
-        }, promcb(resolve, reject, cb))
+        p.db.LightningPeerGroups.findOne({ nodes:  {$in : [pk] } }, promcb(resolve, reject, cb))
       })
     })
   }
-
-  static peerDisonnected (pk, cb) {
-    return new Promise((resolve, reject) => {
-      const p = new LightningPeers()
-
-      const logEvent = p.LogEvent(pk, [{ name: 'DISCONNECTED' }], promcb(resolve, reject, cb))
-
-      return p.db.LightningPeers.updateOne(
-        { node_public_key: pk },
-        {
-          $set: {
-            last_disconnect: Date.now()
-          }
-        }, logEvent)
-    })
-  }
-
-  static channelRejected (pk, {reason}, cb) {
-    return new Promise((resolve, reject) => {
-      const p = new LightningPeers()
-      p.LogEvent(pk, [{ name: 'CHANNEL_REJECT', reason }], promcb(resolve, reject, cb))
-    })
-  }
-
-  static peerConnected (pk, cb) {
-    return new Promise((resolve, reject) => {
-      const p = new LightningPeers()
-
-      const logEvent = p.LogEvent(pk, [{ name: 'CONNECTED' }], promcb(resolve, reject, cb))
-
-      return p.db.LightningPeers.updateOne(
-        { node_public_key: pk },
-        {
-          $set: {
-            last_connect: Date.now()
-          }
-        }, logEvent)
-    })
-  }
-
-  static updateFeeTier (pk, { tier }, cb) {
-    return new Promise((resolve, reject) => {
-      const p = new LightningPeers()
-
-      const logEvent = p.LogEvent(pk,
-        [{ name: 'ROUTING_FEE_TIER', meta: { tier: STARTING_FEE_TIER }} ],
-        promcb(resolve, reject, cb))
-
-      return p.db.LightningPeers.updateOne(
-        { node_public_key: pk },
-        {
-          $set: {
-            routing_fee_tier: tier
-          }
-        }, logEvent)
-    })
-  }
-
 }
 
 module.exports = LightningPeerGroups
