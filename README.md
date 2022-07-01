@@ -3,5 +3,6 @@
 Microservice worker for data collection, fee management and other features related to routing.
 
 ### Features
-* Fee tier setting for peers.
-* Peer data collection (not being used at this time)
+* Sync routing events from the configured nodes.
+* Peer up time tracker
+* Peers are grouped into peer groups. Fee settings are set per fee group.
