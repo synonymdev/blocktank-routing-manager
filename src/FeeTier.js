@@ -30,7 +30,7 @@ class FeeTier {
 
   static tierToPpmFeeRate(tier){
     const pcnt = tier[2]
-    const rate = new BN(pcnt).times(100000).toString()
+    const rate = new BN(new BN(pcnt).divdedBy(100)).times(1000000)
     return rate
   }
 }
