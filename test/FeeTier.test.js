@@ -29,10 +29,31 @@ describe('Fee Tier', () => {
   })
 
   describe('tierToPpmFeeRate', () => {
+    
+    it("ppmToPcnt",()=>{
+      const pcnt = FeeTier.ppmToPcnt(1)
+      assert(pcnt === 0.0001)
+    })
+    it("pcntToPpm",()=>{
+      const pcnt = FeeTier.pcntToPpm(1)
+      assert(pcnt === 10000)
+    })
     it('tierToPpmFeeRate', () => {
-      const rate = 1 * 100000
       const res = FeeTier.tierToPpmFeeRate(FeeTier.LEVELS[0])
-      assert(rate === +res)
+      assert(res === 10000)
+    })
+  })
+
+  describe('nextTierAmount', () => {
+    it('should get next tier amount', () => {
+      const t = FeeTier.LEVELS[0]
+      const amt = FeeTier.nextTierAmount(t[1])
+      assert(amt === 1)
+    })
+    it('should get next tier amount for max amount', () => {
+      const t = FeeTier.LEVELS[5]
+      const amt = FeeTier.nextTierAmount(10000000000)
+      assert(amt === Number.MAX_SAFE_INTEGER)
     })
   })
 

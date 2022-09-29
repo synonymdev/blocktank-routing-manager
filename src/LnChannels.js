@@ -5,6 +5,8 @@ const { EventEmitter } = require('events')
 class LnChannels extends EventEmitter {
   constructor (api) {
     super()
+    // currentChannels holds list of channels keyed by channel id
+    this.currentChannels = new Map()
     this.api = api
     this._updateChannelList()
     this._channel_timer = setInterval(() => {
@@ -12,12 +14,18 @@ class LnChannels extends EventEmitter {
     }, 5000)
   }
 
+  getNodeChannels(pubkey){
+    return this.nodes.get(pubkey)
+  }
+
   async getNodeOfChannel(chanId){
     let chan = this.currentChannels.get(chanId)
     if (chan) {
       return chan.partner_public_key
     }
+    console.log("Getting closed ", chanId)
     chan = await this.api.getNodeOfClosedChannel(chanId)
+    if(!chan) return 
     return chan.public_key
   }
 
@@ -56,10 +64,6 @@ class LnChannels extends EventEmitter {
 
   async _processChannels () {
     const channelArr = await this.api.getChannels()
-
-    // currentChannels holds list of channels keyed by channel id
-    this.currentChannels = new Map()
-
     // nodes is a map that holds channels keyed by the remote node id
     this.nodes = new Map()
 
@@ -67,6 +71,9 @@ class LnChannels extends EventEmitter {
 
     channelArr.forEach((ch) => {
       this.currentChannels.set(ch.id, ch)
+      ch.other_ids.forEach((id)=>{
+        this.currentChannels.set(id, ch)
+      })
       if (!this.nodes.has(ch.partner_public_key)) {
         this.nodes.set(ch.partner_public_key, [])
       }

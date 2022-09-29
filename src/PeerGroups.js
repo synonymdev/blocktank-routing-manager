@@ -56,7 +56,7 @@ class LightningPeerGroups extends EventEmitter {
         }
 
         return p.db.LightningPeerGroups.updateOne(
-          { _id: new order.db.ObjectId(id) },
+          { _id: new p.db.ObjectId(id) },
           {
             $set: data
           }, promcb(resolve, reject, cb))

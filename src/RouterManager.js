@@ -2,18 +2,19 @@
 const LightningPeers = require('./LightningPeers')
 const TierManager = require('./TierManager')
 const LnChannels = require("./LnChannels")
+const { EventEmitter } = require('events')
 
-module.exports = class RouteManager {
+module.exports = class RouteManager extends EventEmitter {
   constructor (config = {}, api) {
+    super()
     this.config = config
     this.api = api
 
     this.lnChannels = new LnChannels(api)
     this.lnChannels.once('channels_updated', () => {
       this.tierManager = new TierManager(config, this.lnChannels, this.api)
+      this.emit("ready")
     })
-
-    // TODO record all current peers on launch
   }
 
   // A new routing event has been detected, we start

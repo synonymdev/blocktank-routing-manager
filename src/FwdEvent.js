@@ -2,6 +2,7 @@
 const { DB } = require('blocktank-worker')
 const config = require('../config/worker.config.json')
 const { EventEmitter } = require('events')
+const crypto = require("crypto")
 
 const promcb = (resolve, reject, cb) => {
   return (err, data) => {
@@ -17,14 +18,24 @@ class LightningFwd extends EventEmitter {
     super()
     this.data = params
     this.ready = false
-    DB(config, (err, db) => {
+    DB(config, async (err, db) => {
       if (err) throw err
       this.db = db
       this.ready = true
+      await this.addIndex()
       process.nextTick(() => this.emit('ready'))
     })
   }
 
+  async addIndex(){
+    try{
+      await this.db.LightningFwdEvent.createIndex( { "event_id": 1 }, { unique: true } )
+    } catch(err){
+      console.log("FAILED_TO_CREATE_INDEX")
+      console.log(err)
+    }
+
+  }
   static from (params) {
     return new LightningFwd(params)
   }
@@ -44,9 +55,15 @@ class LightningFwd extends EventEmitter {
           routed_at: params.routed_at,
           usd_amount: params.usd_amount,
           usd_fee: params.usd_fee,
-          created_at: Date.now()
+          created_at: Date.now(),
+          event_id: crypto.createHash('sha256').update(`${params.in_chan_node}:${params.out_chan_node}:${params.routed_at}:${params.amount}`).digest('hex')
         }
-        p.db.LightningFwdEvent.insertOne(data, promcb(resolve, reject, cb))
+        p.db.LightningFwdEvent.insertOne(data,(err,res)=>{
+          if(err && err.code === 11000){
+            return promcb(resolve, reject, cb)(null,"EXISTS")
+          }
+          return promcb(resolve, reject, cb)(err,res)
+        })
       })
     })
   }
