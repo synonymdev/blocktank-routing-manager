@@ -141,9 +141,10 @@ describe('End to end test', async function () {
     // make sure its there
     this.timeout(5000000)
     await dropFwdDb()
+    const worker = await createWorker({})
+    await promisify(worker.syncFwdEvents)()
     let prevCarolGroup = await getPeerGroup(nodes.carol.info.pubkey)
     let prevDaveGroup = await getPeerGroup(nodes.dave.info.pubkey)
-    const worker = await createWorker({})
     const invoiceAmount = random(1, 1000)
     const invoice = await newInvoice('carol', invoiceAmount)
     const dPay = await pay('dave', invoice.request)
@@ -178,6 +179,7 @@ describe('End to end test', async function () {
     await promisify(worker.syncFwdEvents)()
     let currentCarolGroup = await getPeerGroup(nodes.carol.info.pubkey)
     assert(JSON.stringify(currentCarolGroup) === JSON.stringify(prevCarolGroup))
+    worker.stopWorker()
   })
 
   it('Increase fee tier', async function () {
@@ -198,6 +200,7 @@ describe('End to end test', async function () {
     assert(prevIndex === 0)
     assert( currentIndex === 1)
     assert(!FeeTier.isSame(currentPg.routing_fee_tier,prevPg.routing_fee_tier))
+    worker.stopWorker()
   })
 
 })
