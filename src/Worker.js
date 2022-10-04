@@ -12,7 +12,7 @@ class LightningRouter extends Worker {
     super({
       name: 'svc:ln:router',
       port: 58121,
-      db_url: 'mongodb://localhost:27017',
+      db_url: 'mongodb://0.0.0.0:27017',
       modules: [
         {
           name: 'sats-convert'

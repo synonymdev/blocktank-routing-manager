@@ -36,7 +36,7 @@ module.exports = class RouteManager extends EventEmitter {
 
   // A routing event has completed, we save this event to our tier manager to update it at later point
   async handleConfirmedRoute (args) {
-    this.tierManager.add(args)
+// this.tierManager.add(args)
   }
 
   // Process channel opening requets

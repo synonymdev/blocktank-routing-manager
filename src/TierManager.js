@@ -16,7 +16,7 @@ class TierManager {
     this._updates = new Map()
     this._updating_db = false
     lnChannels.on('channels_updated', () => {
-      this.syncFwdEvents()
+      this.syncFwdEvents(()=>{})
     })
   }
 
