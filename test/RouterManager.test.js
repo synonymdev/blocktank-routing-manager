@@ -92,7 +92,7 @@ function getPeerGroup(pk){
 
 describe('End to end test', async function () {
   before(async function () {
-    this.timeout(100000)
+    this.timeout(100000000)
     console.log('Setting up lightning cluster')
     const {nodes,hub, kill} = await regtest.getOrCreateHub(2)
     console.log("Settings up hub")
@@ -201,6 +201,29 @@ describe('End to end test', async function () {
     assert( currentIndex === 1)
     assert(!FeeTier.isSame(currentPg.routing_fee_tier,prevPg.routing_fee_tier))
     worker.stopWorker()
+  })
+
+  describe('Fee tier check', () => { 
+    let worker
+    before(async ()=>{
+      worker = await createWorker({})
+    })
+    after(()=>{
+      worker.stopWorker()
+    })
+    for( const ft of FeeTier.LEVELS ){
+      it('Check fee paid matches fee '+ft, async function () {
+          this.timeout(5000000)
+          const pcnt = ft[2]
+          await worker.router.tierManager.updateLNFees(ft,[nodes.carol.info.pubkey])
+          await sleep(3000)
+          const xinvoice = await newInvoice('carol', 1000)
+          const xdPay = await pay('dave', xinvoice.request)
+          await sleep(3000)
+          const xfee = Math.floor((xdPay.payment.tokens * pcnt/100))
+          assert(xfee === xdPay.payment.fee)
+      })
+    }
   })
 
 })
