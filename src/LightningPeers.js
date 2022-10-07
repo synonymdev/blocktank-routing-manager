@@ -3,6 +3,7 @@ const { DB } = require('blocktank-worker')
 const config = require('../config/worker.config.json')
 const { EventEmitter } = require('events')
 const FeeTier = require('./FeeTier')
+
 const promcb = (resolve, reject, cb) => {
   return (err, data) => {
     if (err) {
@@ -101,7 +102,6 @@ class LightningPeers extends EventEmitter {
   static channelRejected (pk, {reason}, cb) {
     return new Promise((resolve, reject) => {
       const p = new LightningPeers()
-
       p.LogEvent(pk, [{ name: 'CHANNEL_REJECT', reason }], promcb(resolve, reject, cb))
     })
   }
@@ -139,6 +139,8 @@ class LightningPeers extends EventEmitter {
         }, logEvent)
     })
   }
+  
+  static FeeTier=FeeTier
 }
 
 module.exports = LightningPeers

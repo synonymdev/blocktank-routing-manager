@@ -18,7 +18,10 @@
   },
   "homepage": "https://github.com/synonymdev//blocktank-routing-manager#readme",
   "dependencies": {
+    "@synonymdev/lightning-channel-id": "^0.0.3",
     "async": "^3.2.3",
-    "bignumber.js": "^9.0.2"
+    "bignumber.js": "^9.0.2",
+    "blocktank-worker": "github:synonymdev/blocktank-worker",
+    "blocktank-worker-ln": "github:synonymdev/blocktank-worker-ln"
   }
 }
