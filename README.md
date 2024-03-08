@@ -1,4 +1,4 @@
-# blocktank-routing-manager
+# LSP-routing-manager
 
 Microservice worker for data collection, fee management and other features related to routing.
 
